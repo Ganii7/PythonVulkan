@@ -51,14 +51,16 @@ class Engine:
 
     def make_device(self):
         self.physicalDevice = device.choose_physical_device(self.instance, self.debugMode)
-        
-        pass
+        self.device = device.create_logical_device(self.physicalDevice, self.debugMode)
+        self.graphicsQueue = device.get_queue(self.physicalDevice, self.device, self.debugMode)
         
         
     def close(self):
 
         if self.debugMode:
             print("Goodbye see you!\n")
+            
+        vkDestroyDevice(device = self.device, pAllocator = None)
         
         # if self.debugMode:
         #     destructionFunction = vkGetInstanceProcAddr(self.instance, "vkDestroyDebugReportCallbackEXT")
