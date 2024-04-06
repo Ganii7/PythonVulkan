@@ -47,12 +47,28 @@ class Engine:
         
     #     if self.debugMode:
     #         self.debugMessenger = logging.make_debug_messanger(self.instance)
-
+    
+        c_style_surface = ffi.new("VkSurfaceKHR*")
+        if(
+            glfw.create_window_surface(
+                instance = self.instance,
+                window = self.window,
+                allocator = None,
+                surface = c_style_surface
+            ) != VK_SUCCESS
+        ):
+            if self.debugMode:
+                print("Failed to abstract glfw surface for Vulkan")
+        elif self.debugMode:
+            print("Success abstracting glfw surface for Vulkan")
+            
+        self.surface = c_style_surface[0]
+                
 
     def make_device(self):
         self.physicalDevice = device.choose_physical_device(self.instance, self.debugMode)
-        self.device = device.create_logical_device(self.physicalDevice, self.debugMode)
-        self.graphicsQueue = device.get_queue(self.physicalDevice, self.device, self.debugMode)
+        self.device = device.create_logical_device(self.physicalDevice, self.instance, self.surface, self.debugMode)
+        (self.graphicsQueue, self.presentQueue) = device.get_queues(self.physicalDevice, self.device, self.instance, self.surface, self.debugMode)
         
         
     def close(self):
@@ -61,6 +77,8 @@ class Engine:
             print("Goodbye see you!\n")
             
         vkDestroyDevice(device = self.device, pAllocator = None)
+        destructionFunction = vkGetInstanceProcAddr(self.instance, "vkDestroySurfaceKHR")
+        destructionFunction(instance = self.instance, surface = self.surface, pAllocator = None)
         
         # if self.debugMode:
         #     destructionFunction = vkGetInstanceProcAddr(self.instance, "vkDestroyDebugReportCallbackEXT")

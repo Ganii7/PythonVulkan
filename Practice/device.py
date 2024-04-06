@@ -84,8 +84,10 @@ def check_device_extension_support(device, requestedExtensions, debug):
             return False
     return True
 
-def find_queue_families(device, debug):
+def find_queue_families(device, instance, surface, debug):
     indices = QueueFamilyIndices()
+    
+    surfaceSupport = vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfaceSupportKHR")
     
     queueFamiles = vkGetPhysicalDeviceQueueFamilyProperties(device)
                     
@@ -95,10 +97,15 @@ def find_queue_families(device, debug):
     for i,queueFamily in enumerate(queueFamiles):
         if queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT:
             indices.graphicsFamily = i
+            
+            if debug:
+                print(f"Queue Family {i} is suitable for graphics.") 
+            
+        if surfaceSupport(device, i, surface):
             indices.presentFamily = i
             
             if debug:
-                print(f"Queue Family {i} is suitable for graphics and presenting.") 
+                print(f"Queue Family {i} is suitable for presenting.") 
             
         
         if indices.is_complete():
@@ -106,15 +113,24 @@ def find_queue_families(device, debug):
     
     return indices
 
-def create_logical_device(physicalDevice, debug):
+def create_logical_device(physicalDevice, instance, surface, debug):
     
-    indices = find_queue_families(physicalDevice, debug)
+    indices = find_queue_families(physicalDevice, instance, surface, debug)
+    uniqueIndices = [indices.graphicsFamily,]
+    if indices.graphicsFamily != indices.presentFamily:
+        uniqueIndices.append(indices.presentFamily)
+        
+    queueCreateInfo = []
     
-    queueCreateInfo = VkDeviceQueueCreateInfo(
-        queueFamilyIndex = indices.graphicsFamily,
-        queueCount = 1,
-        pQueuePriorities = [1.0,]
-    )
+    for queueFamilyIndex in uniqueIndices:
+        queueCreateInfo.append(
+            VkDeviceQueueCreateInfo(
+                queueFamilyIndex = queueFamilyIndex,
+                queueCount = 1,
+                pQueuePriorities = [1.0,]
+            )
+        )
+    
     
     deviceFeatures = VkPhysicalDeviceFeatures()
     
@@ -123,8 +139,8 @@ def create_logical_device(physicalDevice, debug):
         enabledLayers.append("VK_LAYER_KHRONOS_validation")
         
     createInfo = VkDeviceCreateInfo(
-        queueCreateInfoCount = 1,
-        pQueueCreateInfos = [queueCreateInfo,],
+        queueCreateInfoCount = len(queueCreateInfo),
+        pQueueCreateInfos = queueCreateInfo,
         enabledExtensionCount = 0,
         pEnabledFeatures = [deviceFeatures,],
         enabledLayerCount = len(enabledLayers),
@@ -137,11 +153,18 @@ def create_logical_device(physicalDevice, debug):
         pAllocator = None
         )
     
-def get_queue(physicalDevice, device, debug):
-    indices = find_queue_families(physicalDevice, debug)
+def get_queues(physicalDevice, device, instance, surface, debug):
+    indices = find_queue_families(physicalDevice, instance, surface, debug)
     
-    return vkGetDeviceQueue(
-        device = device,
-        queueFamilyIndex = indices.graphicsFamily,
-        queueIndex = 0
-    )
+    return [
+        vkGetDeviceQueue(
+            device = device,
+            queueFamilyIndex = indices.graphicsFamily,
+            queueIndex = 0
+        ),
+        vkGetDeviceQueue(
+            device = device,
+            queueFamilyIndex = indices.presentFamily,
+            queueIndex = 0
+        )
+    ]
