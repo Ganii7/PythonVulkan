@@ -17,4 +17,5 @@ def make_debug_messanger(instance):
     
     # creationFunction = vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT")
     
-    return creationFunction(instance, createInfo, None)
+    return False
+

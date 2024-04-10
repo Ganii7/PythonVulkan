@@ -69,6 +69,17 @@ class Engine:
         self.physicalDevice = device.choose_physical_device(self.instance, self.debugMode)
         self.device = device.create_logical_device(self.physicalDevice, self.instance, self.surface, self.debugMode)
         (self.graphicsQueue, self.presentQueue) = device.get_queues(self.physicalDevice, self.device, self.instance, self.surface, self.debugMode)
+        # self.graphicsQueue = queues[0]
+        # self.presentQueue = queues[1]
+        
+        bundle = device.create_swapchain(self.instance, self. device, self.physicalDevice, self.surface, self.width, self.height, self. debugMode)
+        self.swapchain = bundle.swapchain
+        self.swapchainImages = bundle.images
+        self.swapchainFormat = bundle.format
+        self.swapchainExtent = bundle.extent
+        
+        
+        
         
         
     def close(self):
@@ -76,6 +87,9 @@ class Engine:
         if self.debugMode:
             print("Goodbye see you!\n")
             
+            
+        destructionFunction = vkGetDeviceProcAddr(self.device, "vkDestroySwapchainKHR")
+        destructionFunction(self.device, self.swapchain, None)
         vkDestroyDevice(device = self.device, pAllocator = None)
         destructionFunction = vkGetInstanceProcAddr(self.instance, "vkDestroySurfaceKHR")
         destructionFunction(instance = self.instance, surface = self.surface, pAllocator = None)
